@@ -1,5 +1,4 @@
 import pandas as pd
-import sys 
 from sys import argv as args
 
 # Read the data

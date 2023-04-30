@@ -137,10 +137,14 @@ def main():
         log(f"Prepared the data successfully, Shape: {X.shape}", 0)
         # Perform the prediction
         y_pred = pipeline.predict(X)
+        # Predict the probability
+        y_pred_proba = pipeline.predict_proba(X)
         log(f"Prediction performed successfully", 0)
 
         # Add the prediction to the original dataframe
         dfOriginal['Predicted'] = y_pred
+        dfOriginal['Probability_Robot'] = y_pred_proba[:, 1]
+        dfOriginal['Probability_Human'] = y_pred_proba[:, 0]
 
         # Save the dataframe to a csv file
         dfOriginal.to_csv("data/result.csv", index=False)
