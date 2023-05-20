@@ -49,17 +49,13 @@ def train(file):
 
     # Create a grid of hyperparameters
     param_grid = {
-        "n_estimators": [1, 100, 200],
-        "max_depth": [None, 10, 20],
-        "min_samples_split": [1, 10, 20],
-        "min_samples_leaf": [1, 3, 5],
-        "max_features": ["auto", "sqrt", "log2"],
-        "bootstrap": [True, False],
-        "criterion": ["gini", "entropy"],
-        "class_weight": ["balanced", "balanced_subsample", None],
+        "n_estimators": [1, 100, 200], # n_estimators = number of trees
+        "max_depth": [None, 10, 20], # max_depth = max depth of the tree
+        "min_samples_split": [1, 10, 20], # min_samples_split = min number of samples required to split an internal node
+        "min_samples_leaf": [1, 3, 5], # min_samples_leaf = min number of samples required to be at a leaf node
     }
 
-    limit = 50
+    limit = 25
 
     grid_steps = {
         "n_estimators": int((param_grid["n_estimators"][2] - param_grid["n_estimators"][1]) / limit),
@@ -77,10 +73,6 @@ def train(file):
         "max_depth": None,
         "min_samples_split": None,
         "min_samples_leaf": None,
-        "max_features": None,
-        "bootstrap": None,
-        "criterion": None,
-        "class_weight": None
     }
 
 
@@ -92,8 +84,8 @@ def train(file):
     X_test_scaled = best_pipeline[1][1].transform(best_pipeline[0][1].transform(X_test))
 
     for i in range(limit):
-        print(f"Grid search {i+1}/{limit}" + " " * 20)
-        grid_search = GridSearchCV(best_pipeline[2][1], param_grid, verbose=0, n_jobs=-1, scoring=["accuracy", "f1"], refit=False)
+        log(f"Grid search {i+1}/{limit}" + " " * 20)
+        grid_search = GridSearchCV(best_pipeline[2][1], param_grid, verbose=0, n_jobs=-1, scoring="f1")
         # Fit the grid search
         grid_search.fit(X_train_scaled, y_train)
 
@@ -103,17 +95,12 @@ def train(file):
             "max_depth": grid_search.best_params_["max_depth"],
             "min_samples_split": grid_search.best_params_["min_samples_split"],
             "min_samples_leaf": grid_search.best_params_["min_samples_leaf"],
-            "max_features": grid_search.best_params_["max_features"],
-            "bootstrap": grid_search.best_params_["bootstrap"],
-            "criterion": grid_search.best_params_["criterion"],
-            "class_weight": grid_search.best_params_["class_weight"],
-            "accuracy": grid_search.best_score_
         }
 
         # Compare the new params to the old params
-        if all([best_params[key] == new_params[key] for key in ["n_estimators", "max_depth", "min_samples_split", "min_samples_leaf", "max_features", "bootstrap", "criterion", "class_weight"]]):
+        if all([best_params[key] == new_params[key] for key in ["n_estimators", "max_depth", "min_samples_split", "min_samples_leaf"]]):
             # If the parameters haven't changed, break out of the loop
-            print("The grid search has converged.")
+            log("The grid search has converged.", 1)
             break
 
         best_params = new_params
@@ -139,12 +126,33 @@ def train(file):
                 best_params["min_samples_leaf"], 
                 best_params["min_samples_leaf"] + grid_steps["min_samples_leaf"]
             ],
-            "max_features": ["auto", "sqrt", "log2"],
-            "bootstrap": [True, False],
-            "criterion": ["gini", "entropy"],
-            "class_weight": ["balanced", "balanced_subsample", None],
-        
         }
+
+    # Perform 1 final grid search with the best parameters
+
+    param_grid = {
+        "n_estimators": [best_params["n_estimators"]], # n_estimators = number of trees
+        "max_depth": [best_params["max_depth"]], # max_depth = max depth of the tree
+        "min_samples_split": [best_params["min_samples_split"]], # min_samples_split = min number of samples required to split an internal node
+        "min_samples_leaf": [best_params["min_samples_leaf"]], # min_samples_leaf = min number of samples required to be at a leaf node
+        "max_features": ["auto", "sqrt", "log2"], # max_features = number of features to consider when looking for the best split
+        "bootstrap": [True, False], # bootstrap = whether bootstrap samples are used when building trees
+        "criterion": ["gini", "entropy"], # criterion = function to measure the quality of a split
+        "class_weight": ["balanced", "balanced_subsample", None], # class_weight = weights associated with classes
+    }
+    # Create the grid search
+    grid_search = GridSearchCV(best_pipeline[2][1], param_grid, verbose=0, n_jobs=-1, scoring="f1")
+    grid_search.fit(X_train_scaled, y_train)
+    best_params = {
+        "n_estimators": grid_search.best_params_["n_estimators"],
+        "max_depth": grid_search.best_params_["max_depth"],
+        "min_samples_split": grid_search.best_params_["min_samples_split"],
+        "min_samples_leaf": grid_search.best_params_["min_samples_leaf"],
+        "max_features": grid_search.best_params_["max_features"],
+        "bootstrap": grid_search.best_params_["bootstrap"],
+        "criterion": grid_search.best_params_["criterion"],
+        "class_weight": grid_search.best_params_["class_weight"],
+    }
     log(f"Best parameters: {grid_search.best_params_}", 0)
 
     # --------------------------------------------------------------------------------------------------------
